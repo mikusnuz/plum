@@ -9,6 +9,7 @@ import { useAuthContext } from '~/hooks/AuthContext';
 import { getLoginError } from '~/utils';
 import { useLocalize } from '~/hooks';
 import LoginForm from './LoginForm';
+import SiweLogin from './SiweLogin';
 
 function Login() {
   const localize = useLocalize();
@@ -98,6 +99,30 @@ function Login() {
           error={error}
           setError={setError}
         />
+      )}
+      {(startupConfig as any)?.siweEnabled && (
+        <>
+          {startupConfig?.emailLoginEnabled && (
+            <div className="relative mt-6 flex w-full items-center justify-center border border-t border-gray-300 uppercase dark:border-gray-600">
+              <div className="absolute bg-white px-3 text-xs text-black dark:bg-gray-900 dark:text-white">
+                Or
+              </div>
+            </div>
+          )}
+          <div className="mt-4">
+            <SiweLogin
+              serverDomain={startupConfig.serverDomain ?? ''}
+              onSuccess={(data) => {
+                // The verify endpoint already set the refreshToken cookie
+                // Navigate to main page to trigger auth flow
+                window.location.href = '/';
+              }}
+              onError={(errorMsg) => {
+                setError(errorMsg);
+              }}
+            />
+          </div>
+        </>
       )}
       {startupConfig?.registrationEnabled === true && (
         <p className="my-4 text-center text-sm font-light text-gray-700 dark:text-white">

@@ -106,6 +106,11 @@ const userSchema = new Schema<IUser>(
       unique: true,
       sparse: true,
     },
+    ethereumAddress: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     plugins: {
       type: Array,
     },

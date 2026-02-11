@@ -60,6 +60,7 @@
     "cors": "^2.8.5",
     "dedent": "^1.5.3",
     "dotenv": "^16.0.3",
+    "ethers": "^5.8.0",
     "eventsource": "^3.0.2",
     "express": "^5.2.1",
     "express-mongo-sanitize": "^2.2.0",
