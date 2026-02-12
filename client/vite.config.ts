@@ -58,8 +58,8 @@ export default defineConfig(({ command }) => ({
       },
       includeAssets: [],
       manifest: {
-        name: 'Plum',
-        short_name: 'Plum',
+        name: 'Plum AI - Decentralized AI Chat',
+        short_name: 'Plum AI',
         display: 'standalone',
         background_color: '#000000',
         theme_color: '#009688',

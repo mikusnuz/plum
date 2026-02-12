@@ -1,3 +1,6 @@
 User-agent: *
 Disallow: /api/
+Disallow: /oauth/
 Allow: /
+
+Sitemap: https://plum.plumise.com/sitemap.xml
