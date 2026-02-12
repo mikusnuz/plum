@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Spinner } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 
@@ -19,6 +19,26 @@ const WalletIcon = () => (
   </svg>
 );
 
+/** Find the best wallet provider, preferring PlumWallet via EIP-6963 + window.plumise */
+function getProvider(): any {
+  // 1. Check branded namespace (always PlumWallet, never overwritten)
+  const plumise = (window as any).plumise?.ethereum;
+  if (plumise) return plumise;
+
+  // 2. Check window.ethereum.providers[] array (multi-wallet scenario)
+  const providers = (window as any).ethereum?.providers;
+  if (Array.isArray(providers)) {
+    const plumProvider = providers.find((p: any) => p.isPlumWallet === true);
+    if (plumProvider) return plumProvider;
+  }
+
+  // 3. Check if window.ethereum itself is PlumWallet
+  if ((window as any).ethereum?.isPlumWallet) return (window as any).ethereum;
+
+  // 4. Fallback: any provider
+  return (window as any).ethereum ?? null;
+}
+
 type SiweLoginProps = {
   onSuccess: (data: { token: string; user: any }) => void;
   onError: (error: string) => void;
@@ -28,13 +48,25 @@ type SiweLoginProps = {
 const SiweLogin: React.FC<SiweLoginProps> = ({ onSuccess, onError, serverDomain }) => {
   const localize = useLocalize();
   const [isLoading, setIsLoading] = useState(false);
+  const eip6963Provider = useRef<any>(null);
+
+  // Listen for EIP-6963 wallet announcements
+  useEffect(() => {
+    const handler = (event: any) => {
+      const detail = event.detail;
+      if (detail?.info?.rdns === 'com.plumbug.plumwallet' || detail?.provider?.isPlumWallet) {
+        eip6963Provider.current = detail.provider;
+      }
+    };
+    window.addEventListener('eip6963:announceProvider', handler);
+    // Request announcements from installed wallets
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    return () => window.removeEventListener('eip6963:announceProvider', handler);
+  }, []);
 
   const handleSiweLogin = useCallback(async () => {
-    // Prefer PlumWallet, then fall back to any ethereum provider
-    const ethereum =
-      (window as any).plumise?.ethereum ??
-      ((window as any).ethereum?.isPlumWallet ? (window as any).ethereum : null) ??
-      (window as any).ethereum;
+    // Prefer EIP-6963 discovered PlumWallet, then static detection
+    const ethereum = eip6963Provider.current ?? getProvider();
     if (!ethereum) {
       onError('No wallet detected. Please install PlumWallet or MetaMask.');
       return;
