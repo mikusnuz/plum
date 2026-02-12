@@ -102,7 +102,12 @@ function AuthLayout({
             <div className="mb-6 h-10 w-full">
               <img
                 src="assets/logo.png"
-                className="h-full w-full object-contain"
+                className="h-full w-full object-contain dark:hidden"
+                alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Plum' })}
+              />
+              <img
+                src="assets/logo-white.png"
+                className="hidden h-full w-full object-contain dark:block"
                 alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Plum' })}
               />
             </div>
