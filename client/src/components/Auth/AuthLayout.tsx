@@ -101,7 +101,7 @@ function AuthLayout({
           <BlinkAnimation active={isFetching}>
             <div className="mb-6 h-10 w-full">
               <img
-                src="assets/logo.svg"
+                src="assets/logo.png"
                 className="h-full w-full object-contain"
                 alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Plum' })}
               />
