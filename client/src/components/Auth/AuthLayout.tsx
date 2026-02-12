@@ -4,8 +4,6 @@ import { ErrorMessage } from '~/components/Auth/ErrorMessage';
 import { TranslationKeys, useLocalize } from '~/hooks';
 import SocialLoginRender from './SocialLoginRender';
 import { BlinkAnimation } from './BlinkAnimation';
-import { Banner } from '../Banners';
-import Footer from './Footer';
 
 function AuthLayout({
   children,
@@ -57,27 +55,62 @@ function AuthLayout({
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-white dark:bg-gray-900">
-      <Banner />
-      <BlinkAnimation active={isFetching}>
-        <div className="mt-6 h-10 w-full bg-cover">
-          <img
-            src="assets/logo.svg"
-            className="h-full w-full object-contain"
-            alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Plum' })}
-          />
+    <div className="relative min-h-screen">
+      {/* Background: mock chat interface */}
+      <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800" aria-hidden="true">
+        {/* Simulated sidebar */}
+        <div className="absolute left-0 top-0 hidden h-full w-64 border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 md:block">
+          <div className="p-4">
+            <div className="mb-6 h-8 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="space-y-3">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-6 rounded bg-gray-200 dark:bg-gray-700" style={{ width: `${60 + Math.random() * 40}%` }} />
+              ))}
+            </div>
+          </div>
         </div>
-      </BlinkAnimation>
-      <DisplayError />
-      <div className="absolute bottom-0 left-0 md:m-4">
-        <ThemeSelector />
+        {/* Simulated chat area */}
+        <div className="absolute inset-0 md:left-64">
+          <div className="flex h-full flex-col items-center justify-center p-8">
+            <div className="mb-4 h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700" />
+            <div className="mb-2 h-5 w-48 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="h-4 w-64 rounded bg-gray-200 dark:bg-gray-700" />
+            <div className="mt-8 grid w-full max-w-2xl grid-cols-2 gap-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-16 rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800" />
+              ))}
+            </div>
+          </div>
+          {/* Simulated input bar */}
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <div className="mx-auto h-12 max-w-3xl rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800" />
+          </div>
+        </div>
       </div>
 
-      <main className="flex flex-grow items-center justify-center">
-        <div className="w-authPageWidth overflow-hidden bg-white px-6 py-4 dark:bg-gray-900 sm:max-w-md sm:rounded-lg">
+      {/* Backdrop overlay - non-dismissible */}
+      <div
+        className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm"
+        style={{ pointerEvents: 'auto' }}
+        aria-hidden="true"
+      />
+
+      {/* Login modal */}
+      <div className="relative z-50 flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+          <BlinkAnimation active={isFetching}>
+            <div className="mb-6 h-10 w-full">
+              <img
+                src="assets/logo.svg"
+                className="h-full w-full object-contain"
+                alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Plum' })}
+              />
+            </div>
+          </BlinkAnimation>
+          <DisplayError />
           {!hasStartupConfigError && !isFetching && header && (
             <h1
-              className="mb-4 text-center text-3xl font-semibold text-black dark:text-white"
+              className="mb-4 text-center text-2xl font-semibold text-black dark:text-white"
               style={{ userSelect: 'none' }}
             >
               {header}
@@ -88,9 +121,16 @@ function AuthLayout({
             (pathname.includes('login') || pathname.includes('register')) && (
               <SocialLoginRender startupConfig={startupConfig} />
             )}
+          <p className="mt-4 text-center text-xs text-gray-400">
+            AI chat powered by Plumise blockchain
+          </p>
         </div>
-      </main>
-      <Footer startupConfig={startupConfig} />
+      </div>
+
+      {/* Theme selector */}
+      <div className="absolute bottom-0 left-0 z-50 md:m-4">
+        <ThemeSelector />
+      </div>
     </div>
   );
 }
