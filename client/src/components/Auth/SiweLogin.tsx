@@ -131,12 +131,13 @@ const SiweLogin: React.FC<SiweLoginProps> = ({ onSuccess, onError, serverDomain 
       const data = await verifyRes.json();
       onSuccess(data);
     } catch (err: any) {
-      // User rejected or error
+      console.error('[SIWE] Login error:', err);
       if (err.code === 4001) {
-        // User rejected the request
         onError('Sign-in request was rejected');
       } else {
-        onError(err.message || 'Wallet sign-in failed');
+        // Pass raw error message so user can see what actually failed
+        const msg = err.message || 'Wallet sign-in failed';
+        onError(msg);
       }
     } finally {
       setIsLoading(false);

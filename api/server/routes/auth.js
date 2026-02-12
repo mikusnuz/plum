@@ -89,12 +89,14 @@ if (isEnabled(process.env.ALLOW_SIWE_LOGIN)) {
     async (req, res) => {
       try {
         const { message, signature } = req.body;
+        console.log('[SIWE] Verify request received, message length:', message?.length, 'sig:', signature?.slice(0, 10));
 
         if (!message || !signature) {
           return res.status(400).json({ message: 'Message and signature are required' });
         }
 
         const { address } = await verifySiweSignature(message, signature);
+        console.log('[SIWE] Verification succeeded for:', address);
         const user = await findOrCreateSiweUser(address);
 
         if (user.twoFactorEnabled) {
@@ -109,8 +111,7 @@ if (isEnabled(process.env.ALLOW_SIWE_LOGIN)) {
         const token = await setAuthTokens(user._id, res);
         return res.status(200).json({ token, user: userData });
       } catch (err) {
-        const { logger } = require('@librechat/data-schemas');
-        logger.error('[SIWE] Verify error:', err.message);
+        console.error('[SIWE] Verify error:', err.message, err.stack?.split('\n')[1]);
         return res.status(401).json({ message: err.message || 'SIWE verification failed' });
       }
     },

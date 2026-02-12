@@ -91,7 +91,11 @@ function Login() {
 
   return (
     <>
-      {error != null && <ErrorMessage>{localize(getLoginError(error))}</ErrorMessage>}
+      {error != null && (
+        <ErrorMessage>
+          {error.startsWith('[Wallet]') ? error.slice(9) : localize(getLoginError(error))}
+        </ErrorMessage>
+      )}
       {startupConfig?.emailLoginEnabled === true && (
         <LoginForm
           onSubmit={login}
@@ -118,7 +122,8 @@ function Login() {
                 window.location.href = '/';
               }}
               onError={(errorMsg) => {
-                setError(errorMsg);
+                console.error('[SIWE] Raw error:', errorMsg);
+                setError(`[Wallet] ${errorMsg}`);
               }}
             />
           </div>
