@@ -30,7 +30,11 @@ const SiweLogin: React.FC<SiweLoginProps> = ({ onSuccess, onError, serverDomain 
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSiweLogin = useCallback(async () => {
-    const ethereum = (window as any).ethereum;
+    // Prefer PlumWallet, then fall back to any ethereum provider
+    const ethereum =
+      (window as any).plumise?.ethereum ??
+      ((window as any).ethereum?.isPlumWallet ? (window as any).ethereum : null) ??
+      (window as any).ethereum;
     if (!ethereum) {
       onError('No wallet detected. Please install PlumWallet or MetaMask.');
       return;
