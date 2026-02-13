@@ -3,6 +3,7 @@ import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
 import TokenCreditsItem from './TokenCreditsItem';
 import AutoRefillSettings from './AutoRefillSettings';
+import PlumBilling from './PlumBilling';
 
 function Balance() {
   const localize = useLocalize();
@@ -35,6 +36,7 @@ function Balance() {
     <div className="flex flex-col gap-4 p-4 text-sm text-text-primary">
       {/* Token credits display */}
       <TokenCreditsItem tokenCredits={tokenCredits} />
+      <PlumBilling />
 
       {/* Auto-refill display */}
       {autoRefillEnabled ? (

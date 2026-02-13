@@ -26,8 +26,10 @@ const auth = require('./auth');
 const keys = require('./keys');
 const user = require('./user');
 const mcp = require('./mcp');
+const plum = require('./plum');
 
 module.exports = {
+  plum,
   mcp,
   auth,
   adminAuth,

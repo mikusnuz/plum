@@ -1,8 +1,55 @@
 const { logger } = require('@librechat/data-schemas');
 const { getMultiplier, getCacheMultiplier } = require('./tx');
-const { Transaction, Balance } = require('~/db/models');
+const { Transaction, Balance, User } = require('~/db/models');
+const {
+  isAgentFreeWallet,
+  hasAgentFreeWalletConfig,
+} = require('~/server/services/plum/entitlements');
 
 const cancelRate = 1.15;
+
+async function getBalanceSnapshot(user) {
+  const balance = await Balance.findOne({ user }, 'tokenCredits').lean();
+  return Number(balance?.tokenCredits || 0);
+}
+
+function markAgentFreeContext(transaction) {
+  if (typeof transaction.context === 'string' && transaction.context.length > 0) {
+    if (!transaction.context.includes(':agent-free')) {
+      transaction.context = `${transaction.context}:agent-free`;
+    }
+    return;
+  }
+
+  transaction.context = 'agent-free';
+}
+
+async function resolveSkipBalanceDeduction(txData) {
+  if (txData?.skipBalanceDeduction === true) {
+    return true;
+  }
+
+  if (txData?.tokenType === 'credits' || !hasAgentFreeWalletConfig()) {
+    return false;
+  }
+
+  if (txData?.userEthereumAddress && isAgentFreeWallet(txData.userEthereumAddress)) {
+    return true;
+  }
+
+  if (!txData?.user) {
+    return false;
+  }
+
+  const userId = typeof txData.user === 'string' ? txData.user : txData.user.toString();
+  const user = await User.findById(userId, 'ethereumAddress').lean();
+
+  if (!user?.ethereumAddress) {
+    return false;
+  }
+
+  return isAgentFreeWallet(user.ethereumAddress);
+}
 
 /**
  * Updates a user's token balance based on a transaction using optimistic concurrency control
@@ -202,10 +249,24 @@ async function createTransaction(_txData) {
   transaction.endpointTokenConfig = txData.endpointTokenConfig;
   transaction.inputTokenCount = txData.inputTokenCount;
   calculateTokenValue(transaction);
+  const skipBalanceDeduction = await resolveSkipBalanceDeduction(txData);
+  if (skipBalanceDeduction) {
+    markAgentFreeContext(transaction);
+  }
 
   await transaction.save();
   if (!balance?.enabled) {
     return;
+  }
+
+  if (skipBalanceDeduction) {
+    const currentBalance = await getBalanceSnapshot(transaction.user);
+    return {
+      rate: transaction.rate,
+      user: transaction.user.toString(),
+      balance: currentBalance,
+      [transaction.tokenType]: 0,
+    };
   }
 
   let incrementValue = transaction.tokenValue;
@@ -237,11 +298,25 @@ async function createStructuredTransaction(_txData) {
   transaction.inputTokenCount = txData.inputTokenCount;
 
   calculateStructuredTokenValue(transaction);
+  const skipBalanceDeduction = await resolveSkipBalanceDeduction(txData);
+  if (skipBalanceDeduction) {
+    markAgentFreeContext(transaction);
+  }
 
   await transaction.save();
 
   if (!balance?.enabled) {
     return;
+  }
+
+  if (skipBalanceDeduction) {
+    const currentBalance = await getBalanceSnapshot(transaction.user);
+    return {
+      rate: transaction.rate,
+      user: transaction.user.toString(),
+      balance: currentBalance,
+      [transaction.tokenType]: 0,
+    };
   }
 
   let incrementValue = transaction.tokenValue;
