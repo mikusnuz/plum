@@ -186,8 +186,20 @@ async function verifyPaymentController(req, res) {
   try {
     const { planId, txHash } = req.body ?? {};
 
-    if (!planId || !txHash) {
+    // #4: 타입/포맷 검증 강화
+    if (typeof planId !== 'string' || typeof txHash !== 'string') {
+      return res.status(400).json({ message: '`planId` and `txHash` must be strings.' });
+    }
+
+    const trimmedPlanId = planId.trim();
+    const normalizedTxHash = txHash.trim().toLowerCase();
+
+    if (!trimmedPlanId || !normalizedTxHash) {
       return res.status(400).json({ message: '`planId` and `txHash` are required.' });
+    }
+
+    if (!/^0x[a-f0-9]{64}$/.test(normalizedTxHash)) {
+      return res.status(400).json({ message: 'Invalid transaction hash format.' });
     }
 
     const walletAddress = getUserWalletAddress(req.user);
@@ -195,27 +207,48 @@ async function verifyPaymentController(req, res) {
       return res.status(400).json({ message: 'Wallet account is required for plan payments.' });
     }
 
-    const plan = getPlanById(planId);
+    const plan = getPlanById(trimmedPlanId);
     if (!plan) {
-      return res.status(404).json({ message: `Unknown plan: ${planId}` });
+      return res.status(404).json({ message: `Unknown plan: ${trimmedPlanId}` });
     }
 
     const paymentConfig = getPaymentConfig();
+
+    // #6: 필수 설정 검증 (chainId 포함)
     if (!paymentConfig.chainRpcUrl || !paymentConfig.treasuryAddress) {
       return res.status(503).json({
         message: 'Payment verification is not configured. Missing RPC URL or treasury wallet.',
       });
     }
 
-    const normalizedTxHash = String(txHash).trim().toLowerCase();
+    // #3: chainId 필수 검증
+    if (!Number.isFinite(paymentConfig.chainId)) {
+      logger.error('[verifyPaymentController] PLUM_CHAIN_ID is not configured');
+      return res.status(503).json({
+        message: 'Payment verification is not configured. Missing chain ID.',
+      });
+    }
+
+    // #1: findOne 중복 체크 (unique index가 최종 방어이지만 불필요한 RPC 호출 방지)
     const existingPayment = await PlumPayment.findOne({ txHash: normalizedTxHash }).lean();
     if (existingPayment) {
       return res.status(409).json({ message: 'This transaction hash was already claimed.' });
     }
 
+    // #5: RPC 에러 세분화 (타임아웃/네트워크 구분)
+    let tx, receipt;
     const provider = new ethers.providers.JsonRpcProvider(paymentConfig.chainRpcUrl);
-    const tx = await provider.getTransaction(normalizedTxHash);
-    const receipt = await provider.getTransactionReceipt(normalizedTxHash);
+    try {
+      [tx, receipt] = await Promise.all([
+        provider.getTransaction(normalizedTxHash),
+        provider.getTransactionReceipt(normalizedTxHash),
+      ]);
+    } catch (rpcError) {
+      logger.error('[verifyPaymentController] RPC error:', rpcError.message);
+      return res.status(503).json({
+        message: 'Chain RPC is temporarily unavailable. Please try again later.',
+      });
+    }
 
     if (!tx || !receipt) {
       return res.status(404).json({ message: 'Transaction not found or not mined yet.' });
@@ -240,11 +273,9 @@ async function verifyPaymentController(req, res) {
       });
     }
 
-    if (
-      Number.isFinite(paymentConfig.chainId) &&
-      tx.chainId != null &&
-      Number(tx.chainId) !== paymentConfig.chainId
-    ) {
+    // #3: chainId 엄격 검증 (필수)
+    const txChainId = tx.chainId != null ? Number(tx.chainId) : null;
+    if (txChainId !== paymentConfig.chainId) {
       return res.status(400).json({
         message: `Transaction chain mismatch. Expected chainId ${paymentConfig.chainId}.`,
       });
@@ -257,7 +288,16 @@ async function verifyPaymentController(req, res) {
       });
     }
 
-    const latestBlock = await provider.getBlockNumber();
+    let latestBlock;
+    try {
+      latestBlock = await provider.getBlockNumber();
+    } catch (rpcError) {
+      logger.error('[verifyPaymentController] RPC getBlockNumber error:', rpcError.message);
+      return res.status(503).json({
+        message: 'Chain RPC is temporarily unavailable. Please try again later.',
+      });
+    }
+
     const confirmations = latestBlock - receipt.blockNumber + 1;
     if (confirmations < paymentConfig.minConfirmations) {
       return res.status(400).json({
@@ -265,18 +305,27 @@ async function verifyPaymentController(req, res) {
       });
     }
 
+    // #7: 검증 통과 로깅
+    logger.info(
+      `[verifyPaymentController] Verified tx=${normalizedTxHash} from=${txFrom} plan=${plan.id} value=${tx.value.toString()} confirmations=${confirmations}`,
+    );
+
+    // #1: unique index가 최종 방어 (E11000 → 409)
+    // #2: status 필드로 결제-크레딧 원자성 보강
+    let paymentDoc;
     try {
-      await PlumPayment.create({
+      paymentDoc = await PlumPayment.create({
         user: req.user.id,
         walletAddress,
         txHash: normalizedTxHash,
-        chainId: tx.chainId ? Number(tx.chainId) : paymentConfig.chainId,
+        chainId: paymentConfig.chainId,
         planId: plan.id,
         planLabel: plan.label,
         paidPlm: plan.plmAmount,
         paidWei: tx.value.toString(),
         creditsGranted: plan.creditsGranted,
         blockNumber: receipt.blockNumber,
+        status: 'pending',
       });
     } catch (error) {
       if (error?.code === 11000) {
@@ -285,14 +334,35 @@ async function verifyPaymentController(req, res) {
       throw error;
     }
 
-    await createAutoRefillTransaction({
-      user: req.user.id,
-      tokenType: 'credits',
-      context: `plum-plan:${plan.id}`,
-      rawAmount: plan.creditsGranted,
-    });
+    // #2: 크레딧 지급 실패 시 PlumPayment를 failed 상태로 마킹 (롤백)
+    try {
+      await createAutoRefillTransaction({
+        user: req.user.id,
+        tokenType: 'credits',
+        context: `plum-plan:${plan.id}`,
+        rawAmount: plan.creditsGranted,
+      });
+
+      await PlumPayment.updateOne({ _id: paymentDoc._id }, { $set: { status: 'confirmed' } });
+    } catch (creditError) {
+      logger.error(
+        `[verifyPaymentController] Credit grant failed for tx=${normalizedTxHash}, marking payment as failed:`,
+        creditError.message,
+      );
+      await PlumPayment.updateOne({ _id: paymentDoc._id }, { $set: { status: 'failed' } });
+      return res.status(500).json({
+        message: 'Payment recorded but credit grant failed. Please contact support.',
+        txHash: normalizedTxHash,
+      });
+    }
 
     const balance = await getCurrentBalance(req.user.id);
+
+    // #7: 성공 로깅
+    logger.info(
+      `[verifyPaymentController] Credits granted: user=${req.user.id} plan=${plan.id} credits=${plan.creditsGranted} balance=${balance}`,
+    );
+
     return res.status(200).json({
       message: 'Payment verified and credits added.',
       plan,

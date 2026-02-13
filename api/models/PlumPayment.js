@@ -52,8 +52,8 @@ const plumPaymentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['confirmed'],
-      default: 'confirmed',
+      enum: ['pending', 'confirmed', 'failed'],
+      default: 'pending',
     },
   },
   {

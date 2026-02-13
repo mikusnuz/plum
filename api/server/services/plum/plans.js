@@ -1,4 +1,5 @@
 const { ethers } = require('ethers');
+const { logger } = require('@librechat/data-schemas');
 const { normalizeAddress } = require('./entitlements');
 
 const DEFAULT_PLAN_CATALOG = [
@@ -80,7 +81,7 @@ function getPlanById(planId) {
 }
 
 function getPaymentConfig() {
-  const chainRpcUrl = process.env.PLUM_CHAIN_RPC_URL || '';
+  const chainRpcUrl = (process.env.PLUM_CHAIN_RPC_URL || '').trim();
   const treasuryAddress = normalizeAddress(process.env.PLUM_PAYMENT_TREASURY || '');
   const chainId = process.env.PLUM_CHAIN_ID ? Number(process.env.PLUM_CHAIN_ID) : undefined;
   const minConfirmations = Number(process.env.PLUM_PAYMENT_MIN_CONFIRMATIONS || 1);
@@ -94,8 +95,49 @@ function getPaymentConfig() {
   };
 }
 
+/**
+ * #6: 서버 부트 시 결제 설정 유효성 검증.
+ * 필수 ENV가 하나라도 설정되어 있으면 나머지도 모두 있어야 한다.
+ * 결제 ENV가 전혀 없으면 결제 기능 비활성 상태로 간주하고 경고만 출력.
+ */
+function validatePaymentConfigOnBoot() {
+  const rpc = (process.env.PLUM_CHAIN_RPC_URL || '').trim();
+  const treasury = (process.env.PLUM_PAYMENT_TREASURY || '').trim();
+  const chainId = (process.env.PLUM_CHAIN_ID || '').trim();
+
+  const anySet = rpc || treasury || chainId;
+  if (!anySet) {
+    logger.warn('[Plum] No payment ENV configured — billing endpoint will return 503.');
+    return;
+  }
+
+  const errors = [];
+  if (!rpc) {
+    errors.push('PLUM_CHAIN_RPC_URL is missing');
+  }
+  if (!treasury) {
+    errors.push('PLUM_PAYMENT_TREASURY is missing');
+  } else if (!normalizeAddress(treasury)) {
+    errors.push('PLUM_PAYMENT_TREASURY is not a valid Ethereum address');
+  }
+  if (!chainId) {
+    errors.push('PLUM_CHAIN_ID is missing');
+  } else if (!Number.isFinite(Number(chainId))) {
+    errors.push('PLUM_CHAIN_ID is not a valid number');
+  }
+
+  if (errors.length > 0) {
+    logger.error(`[Plum] Payment config incomplete: ${errors.join('; ')}`);
+  } else {
+    logger.info(
+      `[Plum] Payment config OK — chainId=${chainId}, treasury=${normalizeAddress(treasury)}`,
+    );
+  }
+}
+
 module.exports = {
   getPlanCatalog,
   getPlanById,
   getPaymentConfig,
+  validatePaymentConfigOnBoot,
 };

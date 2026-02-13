@@ -198,6 +198,10 @@ const startServer = async () => {
     await initializeOAuthReconnectManager();
     await checkMigrations();
 
+    // #6: Plum 결제 ENV 부트 검증
+    const { validatePaymentConfigOnBoot } = require('~/server/services/plum/plans');
+    validatePaymentConfigOnBoot();
+
     // Configure stream services (auto-detects Redis from USE_REDIS env var)
     const streamServices = createStreamServices();
     GenerationJobManager.configure(streamServices);
