@@ -1,0 +1,81 @@
+# Plum - AI Chat powered by Plumise
+# Configuration for LibreChat
+# https://www.librechat.ai/docs/configuration/librechat_yaml
+
+version: 1.2.1
+
+cache: true
+
+interface:
+  customWelcome: "Welcome to Plum! AI-powered chat on the Plumise blockchain."
+  endpointsMenu: true
+  modelSelect: true
+  parameters: true
+  sidePanel: true
+  presets: true
+  prompts:
+    use: true
+    share: false
+    public: false
+  bookmarks: true
+  multiConvo: false
+  agents:
+    use: false
+    share: false
+    public: false
+  marketplace:
+    use: false
+  fileCitations: false
+
+registration:
+  socialLogins: []
+
+# Plum billing/usage accounting
+balance:
+  enabled: true
+  startBalance: 0
+  autoRefillEnabled: false
+
+transactions:
+  enabled: true
+
+# Model Presets - shown directly in model selector (no hover needed)
+modelSpecs:
+  enforce: true
+  prioritize: true
+  list:
+    - name: "openai-gpt-oss-20b"
+      label: "GPT-OSS 20B"
+      description: "Plumise distributed inference (21B params, 3.6B active MoE)"
+      iconURL: "https://plumise.com/favicon.ico"
+      default: true
+      preset:
+        endpoint: "Plumise AI"
+        model: "openai/gpt-oss-20b"
+        temperature: 0.7
+        top_p: 0.9
+
+# Plumise Inference API - OpenAI-compatible endpoint
+endpoints:
+  custom:
+    - name: "Plumise AI"
+      apiURL: "http://host.docker.internal:15510/v1"
+      baseURL: "http://host.docker.internal:15510/v1"
+      apiKey: "plumise"
+      headers:
+        X-Plum-User-Id: "{{LIBRECHAT_USER_ID}}"
+      models:
+        default:
+          - "openai/gpt-oss-20b"
+        fetch: true
+      titleConvo: true
+      titleModel: "openai/gpt-oss-20b"
+      summarize: false
+      dropParams:
+        - "stop"
+        - "user"
+        - "frequency_penalty"
+        - "presence_penalty"
+        - "logit_bias"
+        - "n"
+      modelDisplayLabel: "Plumise AI"
