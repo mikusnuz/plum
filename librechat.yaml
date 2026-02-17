@@ -54,6 +54,24 @@ modelSpecs:
         model: "openai/gpt-oss-20b"
         temperature: 0.7
         top_p: 0.9
+    - name: "qwen3-32b"
+      label: "Qwen3 32B"
+      description: "Qwen3 32B dense model (32B params)"
+      iconURL: "https://plumise.com/favicon.ico"
+      preset:
+        endpoint: "Plumise AI"
+        model: "qwen/qwen3-32b"
+        temperature: 0.7
+        top_p: 0.9
+    - name: "qwen3.5-397b-a17b"
+      label: "Qwen3.5 397B"
+      description: "Qwen3.5 397B MoE model (397B params, 17B active)"
+      iconURL: "https://plumise.com/favicon.ico"
+      preset:
+        endpoint: "Plumise AI"
+        model: "qwen/qwen3.5-397b-a17b"
+        temperature: 0.7
+        top_p: 0.9
 
 # Plumise Inference API - OpenAI-compatible endpoint
 endpoints:
@@ -67,6 +85,8 @@ endpoints:
       models:
         default:
           - "openai/gpt-oss-20b"
+          - "qwen/qwen3-32b"
+          - "qwen/qwen3.5-397b-a17b"
         fetch: true
       titleConvo: true
       titleModel: "openai/gpt-oss-20b"

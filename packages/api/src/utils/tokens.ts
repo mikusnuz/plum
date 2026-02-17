@@ -349,6 +349,9 @@ const aggregateModels = {
   'gpt-oss': 131000,
   'gpt-oss:20b': 131000,
   'gpt-oss-20b': 131000,
+  // Qwen (Plumise)
+  'qwen3-32b': 131000,
+  'qwen3.5-397b': 131000,
   // GLM models (Zhipu AI)
   glm4: 128000,
   'glm-4': 128000,
@@ -380,6 +383,8 @@ export const modelMaxOutputs = {
   'gpt-5-nano': 128000,
   'gpt-5-pro': 128000,
   'gpt-oss-20b': 131000,
+  'qwen3-32b': 131000,
+  'qwen3.5-397b': 131000,
   system_default: 32000,
 };
 
