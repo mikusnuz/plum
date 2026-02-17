@@ -345,10 +345,6 @@ const aggregateModels = {
   ...bedrockModels,
   ...xAIModels,
   ...qwenModels,
-  // GPT-OSS
-  'gpt-oss': 131000,
-  'gpt-oss:20b': 131000,
-  'gpt-oss-20b': 131000,
   // Qwen (Plumise)
   'qwen3-32b': 131000,
   'qwen3.5-397b': 131000,
@@ -382,7 +378,6 @@ export const modelMaxOutputs = {
   'gpt-5-mini': 128000,
   'gpt-5-nano': 128000,
   'gpt-5-pro': 128000,
-  'gpt-oss-20b': 131000,
   'qwen3-32b': 131000,
   'qwen3.5-397b': 131000,
   system_default: 32000,

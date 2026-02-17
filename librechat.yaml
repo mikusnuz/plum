@@ -8,7 +8,7 @@ cache: true
 
 interface:
   customWelcome: "Welcome to Plum! AI-powered chat on the Plumise blockchain."
-  endpointsMenu: true
+  endpointsMenu: false
   modelSelect: true
   parameters: true
   sidePanel: true
@@ -39,25 +39,16 @@ balance:
 transactions:
   enabled: true
 
-# Model Presets - shown directly in model selector (no hover needed)
+# Model Presets - each model shown directly in top-level selector
 modelSpecs:
   enforce: true
   prioritize: true
   list:
-    - name: "openai-gpt-oss-20b"
-      label: "GPT-OSS 20B"
-      description: "Plumise distributed inference (21B params, 3.6B active MoE)"
-      iconURL: "https://plumise.com/favicon.ico"
-      default: true
-      preset:
-        endpoint: "Plumise AI"
-        model: "openai/gpt-oss-20b"
-        temperature: 0.7
-        top_p: 0.9
     - name: "qwen3-32b"
       label: "Qwen3 32B"
       description: "Qwen3 32B dense model (32B params)"
       iconURL: "https://plumise.com/favicon.ico"
+      default: true
       preset:
         endpoint: "Plumise AI"
         model: "qwen/qwen3-32b"
@@ -84,12 +75,11 @@ endpoints:
         X-Plum-User-Id: "{{LIBRECHAT_USER_ID}}"
       models:
         default:
-          - "openai/gpt-oss-20b"
           - "qwen/qwen3-32b"
           - "qwen/qwen3.5-397b-a17b"
         fetch: true
       titleConvo: true
-      titleModel: "openai/gpt-oss-20b"
+      titleModel: "qwen/qwen3-32b"
       summarize: false
       dropParams:
         - "stop"
