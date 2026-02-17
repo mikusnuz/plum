@@ -33,7 +33,7 @@ registration:
 # Plum billing/usage accounting
 balance:
   enabled: true
-  startBalance: 0
+  startBalance: 10000000
   autoRefillEnabled: false
 
 transactions:
